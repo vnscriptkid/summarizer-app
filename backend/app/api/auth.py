@@ -44,8 +44,18 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     return user
 
 @router.post("/google")
-async def google_auth(id_token_str: str, db: Session = Depends(get_db)):
+async def google_auth(request: Request, db: Session = Depends(get_db)):
     try:
+        # Get request body
+        body = await request.json()
+        id_token_str = body.get("token")
+        
+        if not id_token_str:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Token is required"
+            )
+
         # Verify the token
         idinfo = id_token.verify_oauth2_token(
             id_token_str, 
@@ -89,9 +99,9 @@ async def google_auth(id_token_str: str, db: Session = Depends(get_db)):
                 "last_name": user.last_name
             }
         }
-    except ValueError:
+    except ValueError as e:
         # Invalid token
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials"
+            detail=f"Invalid authentication credentials: {str(e)}"
         )

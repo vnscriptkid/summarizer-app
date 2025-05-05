@@ -1,0 +1,10 @@
+### Health Check
+GET http://localhost:8000/healthcheck
+
+### Verify Google Token
+POST http://localhost:8000/api/v1/auth/google
+Content-Type: application/json
+
+{
+    "token": ""
+}
