@@ -28,8 +28,8 @@ class VideoResponse(VideoBase):
     mindmap_url: Optional[str] = None
     summary_json: Optional[dict] = None
     
-    class Config:
-        orm_mode = True
+    # class Config:
+    #     orm_mode = True
 
 @router.get("/", response_model=List[VideoResponse])
 async def get_videos(

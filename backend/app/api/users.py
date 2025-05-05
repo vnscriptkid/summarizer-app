@@ -14,8 +14,8 @@ class UserResponse(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     
-    class Config:
-        orm_mode = True
+    # class Config:
+    #     orm_mode = True
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):

@@ -41,8 +41,8 @@ class ChannelResponse(BaseModel):
     last_published_at: datetime = None
     created_at: datetime
     
-    class Config:
-        orm_mode = True
+    # class Config:
+    #     orm_mode = True
 
 @router.post("/", response_model=ChannelResponse, status_code=status.HTTP_201_CREATED)
 async def subscribe_to_channel(

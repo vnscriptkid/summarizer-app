@@ -1,13 +1,15 @@
 import logging
 import json
 import os
+import io
+import uuid
 from typing import Dict, Optional, Any, List
 import openai
 import boto3
 import httpx
 import subprocess
-from mermaid import MermaidRenderer
-from elevenlabs import generate, set_api_key
+import pymermaid
+from elevenlabs import ElevenLabs
 
 from ..config import get_settings
 
@@ -16,7 +18,9 @@ logger = logging.getLogger(__name__)
 
 # Configure API keys
 openai.api_key = settings.OPENAI_API_KEY
-set_api_key(settings.ELEVENLABS_API_KEY)
+
+# Initialize ElevenLabs client with API key
+eleven_labs = ElevenLabs(api_key=settings.ELEVENLABS_API_KEY)
 
 # Configure S3 client for file storage
 s3_client = boto3.client(
@@ -133,29 +137,38 @@ async def generate_mindmap(summary: Dict[str, Any]) -> Optional[str]:
                 concept_text = concept.get('concept', f"Concept {i+1}")
                 mindmap_md += f"{indent}  {i+1}.1({concept_text})\n"
         
-        # For MVP, we'll simulate saving to S3 and return a mock URL
-        # In production, you'd use:
-        """
-        # Generate the mind map using mermaid-cli or a similar tool
-        renderer = MermaidRenderer()
-        png_data = renderer.render(mindmap_md, format="png")
+        # For production use:
+        if settings.ENVIRONMENT == "production":
+            # Generate the mind map using pymermaid
+            # Create a temp file for the mermaid diagram
+            temp_file = f"/tmp/mindmap_{uuid.uuid4()}.mmd"
+            with open(temp_file, "w") as f:
+                f.write(mindmap_md)
+            
+            # Generate image using pymermaid
+            output_file = f"/tmp/mindmap_{uuid.uuid4()}.png"
+            pymermaid.render(temp_file, output_file)
+            
+            # Upload to S3
+            file_key = f"mindmaps/{uuid.uuid4()}.png"
+            with open(output_file, 'rb') as f:
+                s3_client.upload_fileobj(
+                    f,
+                    settings.AWS_BUCKET_NAME,
+                    file_key,
+                    ExtraArgs={'ContentType': 'image/png'}
+                )
+            
+            # Clean up temp files
+            os.remove(temp_file)
+            os.remove(output_file)
+            
+            # Generate URL
+            url = f"https://{settings.AWS_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{file_key}"
+            return url
         
-        # Upload to S3
-        file_key = f"mindmaps/{uuid.uuid4()}.png"
-        s3_client.upload_fileobj(
-            png_data,
-            settings.AWS_BUCKET_NAME,
-            file_key,
-            ExtraArgs={'ContentType': 'image/png'}
-        )
-        
-        # Generate URL (adjust based on your S3 configuration)
-        url = f"https://{settings.AWS_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{file_key}"
-        """
-        
-        # Mock URL for MVP
+        # Mock URL for MVP or development environment
         url = f"https://example.com/mindmap-{hash(json.dumps(summary))}.png"
-        
         return url
         
     except Exception as e:
@@ -189,16 +202,16 @@ async def generate_audio(summary: Dict[str, Any]) -> Optional[str]:
         # In production, you'd use:
         """
         # Generate audio using ElevenLabs
-        audio = generate(
+        audio = eleven_labs.generate(
             text=narration_text,
             voice=settings.ELEVENLABS_VOICE_ID,
-            model="eleven_monolingual_v1"
+            model="eleven_multilingual_v2"
         )
         
         # Upload to S3
         file_key = f"audio/{uuid.uuid4()}.mp3"
         s3_client.upload_fileobj(
-            audio,
+            io.BytesIO(b''.join(audio)),
             settings.AWS_BUCKET_NAME,
             file_key,
             ExtraArgs={'ContentType': 'audio/mpeg'}

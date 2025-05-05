@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
 from .config import get_settings
 from .api import auth, users, channels, videos
@@ -9,11 +10,21 @@ from .database import Base, engine
 settings = get_settings()
 
 # Create the FastAPI app
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup code (runs before serving requests)
+    # Create database tables
+    Base.metadata.create_all(bind=engine)
+    yield
+    # Shutdown code (runs when shutting down)
+    pass
+
 app = FastAPI(
     title=settings.APP_NAME,
     description="API for YouTube Summarizer application",
     version="1.0.0",
     openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
+    lifespan=lifespan
 )
 
 # Configure CORS
@@ -46,11 +57,6 @@ app.include_router(
     prefix=f"{settings.API_V1_PREFIX}/videos",
     tags=["Videos"]
 )
-
-@app.on_event("startup")
-async def startup():
-    # Create database tables
-    Base.metadata.create_all(bind=engine)
 
 @app.get("/", tags=["Root"])
 async def root():
