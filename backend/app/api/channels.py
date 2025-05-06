@@ -1,9 +1,11 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 import re
 from datetime import datetime
 import httpx
+import uuid
 
 from ..database import get_db
 from ..config import get_settings
@@ -12,6 +14,7 @@ from .auth import get_current_user
 
 router = APIRouter()
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 # Pydantic schemas for request/response
 from pydantic import BaseModel, HttpUrl, validator
@@ -38,11 +41,15 @@ class ChannelResponse(BaseModel):
     id: str
     yt_channel_id: str
     channel_title: str
-    last_published_at: datetime = None
+    last_published_at: datetime | None = None
     created_at: datetime
     
-    # class Config:
-    #     orm_mode = True
+    model_config = {
+        "from_attributes": True,
+        "json_encoders": {
+            uuid.UUID: lambda v: str(v)
+        }
+    }
 
 @router.post("/", response_model=ChannelResponse, status_code=status.HTTP_201_CREATED)
 async def subscribe_to_channel(
@@ -86,6 +93,9 @@ async def subscribe_to_channel(
     db.commit()
     db.refresh(new_channel)
     
+    # Manual conversion for UUID
+    new_channel.id = str(new_channel.id)
+    
     return new_channel
 
 @router.get("/", response_model=List[ChannelResponse])
@@ -97,6 +107,11 @@ async def get_subscribed_channels(
     Get all channels that the user is subscribed to
     """
     channels = db.query(Channel).filter(Channel.user_id == current_user.id).all()
+    
+    # Manually convert UUID to string for list responses
+    for channel in channels:
+        channel.id = str(channel.id)
+    
     return channels
 
 @router.delete("/{channel_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -108,10 +123,18 @@ async def unsubscribe_from_channel(
     """
     Unsubscribe from a channel
     """
-    channel = db.query(Channel).filter(
-        Channel.id == channel_id,
-        Channel.user_id == current_user.id
-    ).first()
+    try:
+        # Convert string ID to UUID for database query
+        channel_uuid = uuid.UUID(channel_id)
+        channel = db.query(Channel).filter(
+            Channel.id == channel_uuid,
+            Channel.user_id == current_user.id
+        ).first()
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid channel ID format"
+        )
     
     if not channel:
         raise HTTPException(
@@ -123,6 +146,39 @@ async def unsubscribe_from_channel(
     db.commit()
     
     return None
+
+@router.get("/{channel_id}", response_model=ChannelResponse)
+async def get_channel(
+    channel_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get a specific channel by ID
+    """
+    try:
+        # Convert string ID to UUID for database query
+        channel_uuid = uuid.UUID(channel_id)
+        channel = db.query(Channel).filter(
+            Channel.id == channel_uuid,
+            Channel.user_id == current_user.id
+        ).first()
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid channel ID format"
+        )
+    
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Channel not found"
+        )
+    
+    # Manual conversion for UUID
+    channel.id = str(channel.id)
+    
+    return channel
 
 async def get_youtube_channel_info(channel_identifier):
     """
@@ -175,12 +231,14 @@ async def get_youtube_channel_info(channel_identifier):
         )
     
     if response.status_code != 200:
+        logger.error(f"err calling youtube api {response}")
         return None
     
     data = response.json()
     
     # Check if any items were returned
     if not data.get('items'):
+        logger.error(f"no items returned")
         return None
     
     channel = data['items'][0]
