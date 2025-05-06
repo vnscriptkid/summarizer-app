@@ -8,3 +8,23 @@ Content-Type: application/json
 {
     "token": ""
 }
+
+### Get User
+GET http://localhost:8000/api/v1/user
+
+### Add Channel
+POST http://localhost:8000/api/v1/channels/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ2bnNjcmlwdGtpZEBnbWFpbC5jb20iLCJleHAiOjE3NDY1NTgzOTJ9.kxJN_g_52UI8xeA3ZyH5v-Z4Tu470U_P93jRALOR9JQ
+
+{
+    "channel_url": "https://www.youtube.com/channel/UC-9-kyTW8ZkZNDHQJ6FgpwQ"
+}
+
+### Get Channels
+GET http://localhost:8000/api/v1/channels/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ2bnNjcmlwdGtpZEBnbWFpbC5jb20iLCJleHAiOjE3NDY1NTgzOTJ9.kxJN_g_52UI8xeA3ZyH5v-Z4Tu470U_P93jRALOR9JQ
+
+### Get Channel
+GET http://localhost:8000/api/v1/channels/1
+
