@@ -7,9 +7,9 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   
   // Your Google Client ID from Google Cloud
-  const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '118974039134-4m539qqed8lqohlbg51rlar2h8qkv769.apps.googleusercontent.com';
-  console.log({clientId});
-
+  const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || "";
+  const apiUrl = process.env.REACT_APP_API_URL;
+  
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setIsLoading(true);
@@ -18,7 +18,7 @@ const Login: React.FC = () => {
       const idToken = credentialResponse.credential;
       
       // Send token to your backend for verification
-      const response = await fetch('http://localhost:8000/api/v1/auth/google', {
+      const response = await fetch(`${apiUrl}/auth/google`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -33,6 +33,18 @@ const Login: React.FC = () => {
       const data = await response.json();
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
+
+      console.log({data});
+      // {
+      //   "access_token": "",
+      //   "token_type": "bearer",
+      //   "user": {
+      //         "email": "abc@gmail.com",
+      //         "first_name": "a",
+      //         "last_name": "b"
+      //     }
+      // }
+
       navigate('/dashboard');
     } catch (error) {
       console.error('Login failed:', error);

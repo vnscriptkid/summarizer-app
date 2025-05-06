@@ -1,19 +1,32 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Header: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = React.useState<boolean>(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate();
 
-  React.useEffect(() => {
-    // Check if user is logged in - placeholder for actual auth check
-    const token = localStorage.getItem('token');
+  useEffect(() => {
+    // Check if user is logged in using the correct localStorage key
+    const token = localStorage.getItem('access_token');
+    const userData = localStorage.getItem('user');
+    
     setIsLoggedIn(!!token);
+    if (userData) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (e) {
+        console.error('Failed to parse user data', e);
+      }
+    }
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
     setIsLoggedIn(false);
-    // Redirect to home page would happen via React Router
+    setUser(null);
+    navigate('/');
   };
 
   return (
@@ -42,6 +55,11 @@ const Header: React.FC = () => {
                   <Link to="/add-channel" className="hover:text-indigo-200">
                     Add Channel
                   </Link>
+                </li>
+                <li>
+                  <span className="mr-4 text-indigo-200">
+                    {user?.first_name ? `Hello, ${user.first_name}` : 'Welcome'}
+                  </span>
                 </li>
                 <li>
                   <button 

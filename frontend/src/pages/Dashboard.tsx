@@ -33,41 +33,11 @@ const Dashboard: React.FC = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // In a real app, we would use these services to fetch real data
-        // const channelsData = await channelService.getChannels();
+        // Fetch real data from the API
+        const channelsData = await channelService.getChannels();
         // const summariesData = await summaryService.getSummaries();
         
-        // For now, we're using mock data
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Mock data
-        const mockChannels: Channel[] = [
-          {
-            id: '1',
-            ytChannelId: 'UC-xyz123',
-            name: 'TechInsights',
-            thumbnail: 'https://via.placeholder.com/50',
-            lastPublishedAt: '2025-05-04T12:00:00Z',
-            userId: 'user1'
-          },
-          {
-            id: '2',
-            ytChannelId: 'UC-abc456',
-            name: 'Finance Today',
-            thumbnail: 'https://via.placeholder.com/50',
-            lastPublishedAt: '2025-05-02T15:30:00Z',
-            userId: 'user1'
-          },
-          {
-            id: '3',
-            ytChannelId: 'UC-def789',
-            name: 'Science Explained',
-            thumbnail: 'https://via.placeholder.com/50',
-            lastPublishedAt: '2025-05-01T09:45:00Z',
-            userId: 'user1'
-          }
-        ];
-
+        // We'll keep using mock summaries data for now
         const mockSummaries: Summary[] = [
           {
             id: '101',
@@ -138,10 +108,15 @@ const Dashboard: React.FC = () => {
           }
         ];
 
-        setChannels(mockChannels);
+        setChannels(channelsData);
         setSummaries(mockSummaries);
       } catch (error) {
         console.error('Error fetching data:', error);
+        // Handle API errors gracefully
+        setNotification({
+          type: 'error',
+          message: 'Failed to load your channels. Please try again later.'
+        });
       } finally {
         setIsLoading(false);
       }
@@ -153,10 +128,10 @@ const Dashboard: React.FC = () => {
   const handleDeleteChannel = async (channelId: string) => {
     if (window.confirm('Are you sure you want to unsubscribe from this channel?')) {
       try {
-        // In a real app, we would use channelService to delete the channel
-        // await channelService.deleteChannel(channelId);
+        // Use the channelService to delete the channel
+        await channelService.deleteChannel(channelId);
         
-        // For now, just update the state
+        // Update the state after successful deletion
         setChannels(channels.filter(channel => channel.id !== channelId));
         setNotification({
           type: 'success',
@@ -229,14 +204,16 @@ const Dashboard: React.FC = () => {
               <div key={channel.id} className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
                 <div className="flex items-center">
                   <img 
-                    src={channel.thumbnail} 
-                    alt={channel.name} 
+                    src={`https://i.ytimg.com/vi/${channel.yt_channel_id}/default.jpg`} 
+                    alt={channel.channel_title} 
                     className="w-10 h-10 rounded-full"
                   />
                   <div className="ml-3">
-                    <h3 className="font-medium">{channel.name}</h3>
+                    <h3 className="font-medium">{channel.channel_title}</h3>
                     <p className="text-sm text-gray-500">
-                      Last published: {new Date(channel.lastPublishedAt).toLocaleDateString()}
+                      {channel.last_published_at ? 
+                        `Last published: ${new Date(channel.last_published_at).toLocaleDateString()}` : 
+                        'No videos yet'}
                     </p>
                   </div>
                 </div>

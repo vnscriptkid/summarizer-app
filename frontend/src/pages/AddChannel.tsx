@@ -18,19 +18,19 @@ const AddChannel: React.FC = () => {
       return;
     }
 
-    // Check if it's a valid YouTube URL (basic check)
-    if (!channelUrl.includes('youtube.com/') && !channelUrl.includes('youtu.be/')) {
-      setError('Please enter a valid YouTube channel URL');
+    // Validate YouTube URL format
+    const youtubeChannelRegex = /^(https?:\/\/)?(www\.)?youtube\.com\/(c\/|channel\/|user\/|@)[\w-]+\/?$/;
+    const youtubeChannelIdRegex = /^UC[\w-]{22}$/;
+    
+    if (!youtubeChannelRegex.test(channelUrl) && !youtubeChannelIdRegex.test(channelUrl)) {
+      setError('Please enter a valid YouTube channel URL (e.g., https://www.youtube.com/c/ChannelName)');
       return;
     }
 
     setIsLoading(true);
     try {
-      // In a production app, we would make an actual API call:
-      // await channelService.addChannel(channelUrl);
-      
-      // For now, we'll just simulate a successful submission
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Make the actual API call to add the channel
+      await channelService.addChannel(channelUrl);
       
       // Redirect to dashboard with success message
       navigate('/dashboard', { 
@@ -43,7 +43,11 @@ const AddChannel: React.FC = () => {
       });
     } catch (error: any) {
       console.error('Error adding channel:', error);
-      setError(error?.response?.data?.message || 'Failed to add channel. Please try again.');
+      setError(
+        error?.response?.data?.detail || 
+        error?.message || 
+        'Failed to add channel. Please try again.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +73,7 @@ const AddChannel: React.FC = () => {
               disabled={isLoading}
             />
             <p className="mt-1 text-sm text-gray-500">
-              Enter the URL of any YouTube channel you want to follow
+              Enter the URL of any YouTube channel or channel ID (UC...)
             </p>
             {error && (
               <p className="mt-2 text-sm text-red-600">{error}</p>

@@ -8,11 +8,10 @@ export interface User {
 
 export interface Channel {
   id: string;
-  ytChannelId: string;
-  name: string;
-  thumbnail: string;
-  lastPublishedAt: string;
-  userId: string;
+  yt_channel_id: string;
+  channel_title: string;
+  last_published_at: string | null;
+  created_at: string;
 }
 
 export interface Summary {
